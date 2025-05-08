@@ -1,0 +1,196 @@
+#include <iostream>
+#include <string>
+#include <iomanip>
+#include <vector>
+#include <fstream>
+#include "MyStringLibrary.h"
+using namespace std;
+
+const string FileName = "Clients.txt";
+
+struct StClientInfo
+{
+	string AccountNumber = "",
+		PinCode = "",
+		ClientName = "",
+		PhoneNumber = "";
+	double AccountBalance = 0;
+	bool MarkedForDelete = false;
+	bool MarkedForUpdate = false;
+};
+
+StClientInfo ConvertLineToRecord(string Line, string Separtor = "#//#")
+{
+	StClientInfo Client;
+	vector <string> vClientsData = StringLibrary::SplitString(Line, Separtor);
+
+	Client.AccountNumber = vClientsData[0];
+	Client.PinCode = vClientsData[1];
+	Client.ClientName = vClientsData[2];
+	Client.PhoneNumber = vClientsData[3];
+	Client.AccountBalance = stod(vClientsData[4]);
+
+	return Client;
+
+}
+
+string ConvertRecordToLine(StClientInfo Client, string Separator = "#//#")
+{
+
+	string ClientDataLine = "";
+
+	ClientDataLine += Client.AccountNumber + Separator;
+	ClientDataLine += Client.PinCode + Separator;
+	ClientDataLine += Client.ClientName + Separator;
+	ClientDataLine += Client.PhoneNumber + Separator;
+	ClientDataLine += to_string(Client.AccountBalance);
+
+	return ClientDataLine;
+
+}
+
+vector <StClientInfo> LoadClientDataFromFile(string FileName)
+{
+	vector <StClientInfo> vClients;
+
+	fstream MyFile;
+	MyFile.open(FileName, ios::in);
+
+	if (MyFile.is_open())
+	{
+		string Line;
+		StClientInfo Client;
+
+		while(getline(MyFile, Line))
+		{
+			Client = ConvertLineToRecord(Line);
+			vClients.push_back(Client);
+		}
+
+		MyFile.close();
+	}
+
+	return vClients;
+
+}
+
+void PrintClientCard(StClientInfo Client)
+{
+	cout << "\nThe following are the client details:\n";
+	cout << "\nAccout Number: " << Client.AccountNumber;
+	cout << "\nPin Code : " << Client.PinCode;
+	cout << "\nName : " << Client.ClientName;
+	cout << "\nPhone : " << Client.PhoneNumber;
+	cout << "\nAccount Balance: " << Client.AccountBalance << endl;
+}
+
+bool FindClientByAccountNumber(string AccountNumber, vector<StClientInfo> vClient, StClientInfo &Client)
+{
+	for(StClientInfo &ClientToCheck : vClient)
+	{
+		if (ClientToCheck.AccountNumber == AccountNumber)
+		{
+			Client = ClientToCheck;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+StClientInfo ChangeCkientRecord(string AccountNumber)
+{
+	StClientInfo Client;
+
+	Client.AccountNumber = AccountNumber;
+
+	cout << "Enter PinCode? ";
+	getline(cin >> ws, Client.PinCode);
+
+	cout << "Enter Name? ";
+	getline(cin, Client.ClientName);
+
+	cout << "Enter Phone? ";
+	getline(cin, Client.PhoneNumber);
+
+	cout << "Account Balance? ";
+	cin >> Client.AccountBalance;
+
+	return Client;
+
+}
+
+vector <StClientInfo> SaveVectorToFile(string FileName, vector<StClientInfo> vClients)
+{
+	fstream MyFile;
+	MyFile.open(FileName, ios::out);
+	
+	string DataLine;
+
+	if (MyFile.is_open())
+	{
+		for(StClientInfo ClientToUpdate : vClients)
+		{
+			if (ClientToUpdate.MarkedForUpdate == false)
+			{
+				DataLine = ConvertRecordToLine(ClientToUpdate);
+				MyFile << DataLine << endl;
+			}
+		}
+
+		MyFile.close();
+	}
+
+	return vClients;
+}
+
+bool UpdateClientByAccountNumber(string AccountNumber, vector<StClientInfo>& vClients)
+{
+	StClientInfo Client;
+	char Answer = 'n';
+
+	if (FindClientByAccountNumber(AccountNumber, vClients, Client))
+	{
+		PrintClientCard(Client);
+
+		cout << "\nAre you sure you want to update this client (Y / N)? ";
+		cin >> Answer;
+
+		if (Answer == 'y' || Answer == 'Y')
+		{
+
+			for(StClientInfo &ClientToCheck : vClients)
+			{
+				ClientToCheck = ChangeCkientRecord(AccountNumber);
+				break;
+			}
+
+			SaveVectorToFile(FileName, vClients);
+
+			vClients = LoadClientDataFromFile(FileName);
+
+			cout << "\nClient succefully updated." << endl;
+			return true;
+		}
+
+	}
+	else
+	{
+		cout<<"Client with account number ("<<AccountNumber<<") not found."<<endl;
+		return false;
+	}
+}
+
+int main()
+{
+
+	vector <StClientInfo> vClients = LoadClientDataFromFile(FileName);
+
+	string AccountNumber = StringLibrary::ReadString("Please enter an account number : ");
+
+	UpdateClientByAccountNumber(AccountNumber, vClients);
+
+
+	return 0;
+
+}
